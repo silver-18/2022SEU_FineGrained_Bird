@@ -117,17 +117,16 @@ class BirdDataSet(Dataset):
         x_1, y_1, x_2, y_2 = bbox.tolist()
 
         # Generate Bounding Box Mask
-        mask_bbox = np.zeros((img.size[1], img.size[0]), dtype=np.int32)
+        mask_bbox = np.zeros((img.size[1], img.size[0]), dtype=np.float32)
         mask_bbox[x_1:x_2, y_1:y_2] += 1
         mask_bbox = Image.fromarray(mask_bbox)
 
         if self.transform is not None:
             img = self.transform(img)
-            mask_bbox = self.transform(mask_bbox)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
-        return img, target, mask_bbox
+        return img, target, index
 
     def __len__(self):
         return len(self.imgs)
@@ -140,5 +139,5 @@ if __name__ == "__main__":
     dataset = BirdDataSet("./Data/birdDataSet_mixed/bird/images/", transform=transform)
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
-    images, labels, mask_bbox = iter(dataloader).next()
+    images, labels, index = iter(dataloader).next()
     pass

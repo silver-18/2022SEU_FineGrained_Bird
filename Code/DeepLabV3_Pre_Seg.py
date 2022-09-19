@@ -1,29 +1,58 @@
 import numpy as np
+
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.models.segmentation import deeplabv3_resnet50, DeepLabV3_ResNet50_Weights
+from torchvision.models.segmentation import deeplabv3_resnet50
 
-from Dataloader import BirdDataSet
+from Dataloader_Bird import BirdDataSet
+from Dataloader_VOC import VOCDataSet
 
-transform = transforms.Compose([transforms.Resize((500,500)),transforms.ToTensor()])
-dataset = BirdDataSet("./Data/birdDataSet_mixed/bird/images/", transform=transform)
-dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+IMG_MEAN = (0.485, 0.456, 0.406)
+IMG_STD = (0.229, 0.224, 0.225)
 
-# Step 1: Initialize model with the best available weights
-weights = DeepLabV3_ResNet50_Weights.DEFAULT
-model = deeplabv3_resnet50(weights=weights)
+model = deeplabv3_resnet50(pretrained=True)
+model.cuda()
 model.eval()
 
-# Step 2: Initialize the inference transforms
-preprocess = weights.transforms()
+transform = transforms.Compose(
+    [
+        transforms.Resize(520),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=IMG_MEAN, std=IMG_STD),
+    ]
+)
+dataset = BirdDataSet("./Data/birdDataSet_mixed/bird/images/", transform=transform)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-# Step 3: Apply inference preprocessing transforms
-batch = preprocess(img).unsqueeze(0)
 
-# Step 4: Use the model and visualize the prediction
-prediction = model(batch)["out"]
-normalized_masks = prediction.softmax(dim=1)
-class_to_idx = {cls: idx for (idx, cls) in enumerate(weights.meta["categories"])}
-mask = normalized_masks[0, class_to_idx["dog"]]
-to_pil_image(mask).show()
+fig, axs = plt.subplots(4, 4, figsize=(10, 10), sharey=True, sharex=True, dpi=200)
+
+cmap_green2trans = ListedColormap(["green", (0, 0, 0, 0)])
+
+for id, ax in enumerate(axs.flat):
+    images, masks, index = iter(dataloader).next()
+    images = images.cuda()
+
+    prediction = model(images)["out"]
+    normalized_masks = prediction.softmax(dim=1)
+
+    images = images.cpu().detach().numpy()
+    normalized_masks = normalized_masks.cpu().detach().numpy()
+
+    images_origin = np.transpose(images[0], (1, 2, 0)) * IMG_STD + IMG_MEAN
+    images_origin = np.where(images_origin > 1, 1, images_origin)
+    images_origin = np.where(images_origin < 0, 0, images_origin)
+
+    normalized_masks = np.where(normalized_masks > 0.5, 1, 0)
+
+    ax.imshow(images_origin)
+    ax.imshow(normalized_masks[0][3], alpha=0.75, cmap=cmap_green2trans)
+    ax.axis("off")
+
+plt.show()
+
+pass

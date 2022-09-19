@@ -31,12 +31,16 @@ class VOCDataSet(Dataset):
 
     def __getitem__(self, index):
         img = Image.open(self.images[index]).convert("RGB")
+        # img = np.array(img, dtype=np.float32)
+        # img = np.transpose(img, (2, 0, 1))
+
         mask = self._get_seg_mask(self.masks[index])
         mask = np.where(mask == 3, 1, 0)
+        mask = np.expand_dims(mask, 0)
 
         if self.transform is not None:
             img = self.transform(img)
-            mask = self.transform(Image.fromarray(mask))
+            # mask = self.transform(torch.tensor(mask))
 
         return img, mask, index
 
@@ -45,11 +49,7 @@ class VOCDataSet(Dataset):
 
 
 if __name__ == "__main__":
-    transform = transforms.Compose(
-        [transforms.Resize((500, 500)), transforms.ToTensor()]
-    )
-
-    dataset = VOCDataSet(transform=transform)
+    dataset = VOCDataSet()
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
 
     test = iter(dataloader).next()

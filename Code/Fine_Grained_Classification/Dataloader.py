@@ -47,7 +47,8 @@ class CUB200Dataset(Dataset):
 
         image = Image.open(image_path)
         mask = Image.open(mask_path)
-        label = self.id2label[index]
+        # label from 0 to 69
+        label = self.id2label[index] - 1 
         label = torch.nn.functional.one_hot(torch.tensor(label), num_classes=70)
 
         if self.image_transform is not None:
